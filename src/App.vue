@@ -9,6 +9,8 @@ const username = ref<string>('')
 const password = ref<string>('')
 const role = ref<string>('')
 const userId = ref<number | null>(null)
+const avatarId = ref<number | null>(null)
+const selectedFile = ref<File | null>(null)
 const token = ref<string>('')
 const responseAPI = ref<any[]>([])
 
@@ -162,10 +164,85 @@ const getUsersByUsername = () => {
     })
     .then((response) => {
       console.log('Races Response:', response.data)
-      responseAPI.value = response.data.filter((user) => (user.username = username.value))
+      responseAPI.value = response.data.filter((user: any) => (user.username = username.value))
     })
     .catch((error) => {
       console.error('Get Races Error:', error)
+    })
+}
+
+const handleFileChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (file) {
+    selectedFile.value = file
+  }
+}
+
+const uploadAvatar = () => {
+  const formData = new FormData()
+  formData.append('file', selectedFile.value)
+
+  axios
+    .post('http://localhost:8080/documents', formData, {
+      headers: {
+        Authorization: `Bearer ${token.value}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    .then((response) => {
+      console.log('Image Response:', response.data)
+      avatarId.value = response.data.id
+    })
+    .catch((error) => {
+      console.error('Get Races Error:', error)
+    })
+}
+
+const updateAvatar = () => {
+  axios
+    .patch(
+      `http://localhost:8080/users/${userId.value}/avatar/${avatarId.value}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token.value}`
+        }
+      }
+    )
+    .then((response) => {
+      console.log('Av Response:', response.data)
+      responseAPI.value = response.data
+    })
+    .catch((error) => {
+      console.error('Get img up Error:', error)
+    })
+}
+
+const displayAvatar = () => {
+  // Fetch the image Blob from an API
+  axios
+    .get(`http://localhost:8080/documents/${avatarId.value}`, {
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      },
+      responseType: 'blob' // Set the response type to 'blob'
+    })
+    .then((response) => {
+      console.log('Img Response:', response)
+
+      const blob = response.data // The response is the blob
+
+      // Create a local URL for the blob
+      const imgUrl = URL.createObjectURL(blob)
+
+      // Set the img element's src attribute to the blob URL
+      const imgElement = document.getElementById('image') as HTMLImageElement
+      if (imgElement) {
+        imgElement.src = imgUrl
+      }
+    })
+    .catch((error) => {
+      console.error('Error fetching the image:', error)
     })
 }
 </script>
@@ -236,6 +313,17 @@ const getUsersByUsername = () => {
     <pre>{{ responseAPI }}</pre>
     <!-- Use <pre> to format JSON response -->
   </div>
+
+  <h1>Choose img</h1>
+  <input type="file" @change="handleFileChange" /><br />
+  <button @click="uploadAvatar">Upload</button><br />
+
+  <h1>Update avatar</h1>
+  <button @click="updateAvatar">Upload</button><br />
+
+  <h1>Display avatar</h1>
+  <img id="image" alt="Blob Image" /><br />
+  <button @click="displayAvatar()">img</button>
 </template>
 
 <style scoped>
